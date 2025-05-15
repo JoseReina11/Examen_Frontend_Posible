@@ -14,6 +14,7 @@ import TextError from '../../components/TextError'
 import { getProductCategories, getDetail, update } from '../../api/ProductEndpoints'
 import { prepareEntityImages } from '../../api/helpers/FileUploadHelper'
 import { buildInitialValues } from '../Helper'
+import { getSchedules } from '../../api/SchedulesEndpoints'
 
 export default function EditProductScreen ({ navigation, route }) {
   const [open, setOpen] = useState(false)
@@ -21,7 +22,12 @@ export default function EditProductScreen ({ navigation, route }) {
   const [backendErrors, setBackendErrors] = useState()
   const [product, setProduct] = useState({})
 
-  const [initialProductValues, setInitialProductValues] = useState({ name: null, description: null, price: null, order: null, productCategoryId: null, availability: null, image: null })
+  const [ open2, setOpen2 ] = useState(false)
+  const [ schedules, setSchedules ] = useState([])
+
+  const [initialProductValues, setInitialProductValues] = useState({ name: null, description: null, price: null, order: null, productCategoryId: null, availability: null, image: null, 
+    scheduleId: null
+   })
   const validationSchema = yup.object().shape({
     name: yup
       .string()
@@ -42,7 +48,12 @@ export default function EditProductScreen ({ navigation, route }) {
       .number()
       .positive()
       .integer()
-      .required('Product category is required')
+      .required('Product category is required'),
+    scheduleId: yup
+      .number()
+      .positive()
+      .integer()
+      .nullable()
   })
 
   useEffect(() => {
@@ -87,6 +98,31 @@ export default function EditProductScreen ({ navigation, route }) {
     }
     fetchProductDetail()
   }, [route])
+
+  useEffect(() => {
+  async function fetchSchedules () {
+    if (!product.restaurantId) {
+      return; // Si no hay restaurantId, no hace la petición. Si no, saltaria el error Not Found aunque salgan los valores correctos.
+    }
+    try {                           //CUIDADO: ahora le debo cambiar el id, pq si lo dejamos como route.params.id me cogerá el id del producto
+      const fetchedSchedules = await getSchedules(product.restaurantId)
+      const reshapedSchedules = fetchedSchedules.map(schedule => ({
+        label: `${schedule.startTime} - ${schedule.endTime}`,
+        value: schedule.id
+      }))
+      setSchedules(reshapedSchedules)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving schedules. ${error} `,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+  fetchSchedules()
+}, [product.restaurantId]) //y se le pasa como parametro opcional.
+
   const pickImage = async (onSuccess) => {
     const result = await ExpoImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -160,6 +196,21 @@ export default function EditProductScreen ({ navigation, route }) {
               />
               <ErrorMessage name={'productCategoryId'} render={msg => <TextError>{msg}</TextError> }/>
 
+              <DropDownPicker
+                open={open2}
+                value={values.scheduleId}
+                items={schedules}
+                setOpen={setOpen2}
+                onSelectItem={item => {
+                  setFieldValue('scheduleId', item.value)
+                }}
+                setItems={setSchedules}
+                placeholder="Select the schedule (optional)"
+                containerStyle={{ height: 40, marginTop: 20, marginBottom: 20 }}
+                style={{ backgroundColor: GlobalStyles.brandBackground }}
+                dropDownStyle={{ backgroundColor: '#fafafa' }}
+              />
+              
               <TextRegular>Is it available?</TextRegular>
               <Switch
                 trackColor={{ false: GlobalStyles.brandSecondary, true: GlobalStyles.brandPrimary }}

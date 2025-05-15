@@ -12,13 +12,18 @@ import DropDownPicker from 'react-native-dropdown-picker'
 import * as yup from 'yup'
 import { ErrorMessage, Formik } from 'formik'
 import TextError from '../../components/TextError'
+import { getSchedules } from '../../api/SchedulesEndpoints'
 
 export default function CreateProductScreen ({ navigation, route }) {
   const [open, setOpen] = useState(false)
   const [productCategories, setProductCategories] = useState([])
   const [backendErrors, setBackendErrors] = useState()
+  
+  const [open2, setOpen2] = useState(false)
+  const [schedules, setSchedules] = useState([])
 
-  const initialProductValues = { name: null, description: null, price: null, order: null, restaurantId: route.params.id, productCategoryId: null, availability: true }
+  //añadir prop a initialProductValues
+  const initialProductValues = { name: null, description: null, price: null, order: null, restaurantId: route.params.id, productCategoryId: null, availability: true, scheduleId: null }
   const validationSchema = yup.object().shape({
     name: yup
       .string()
@@ -39,7 +44,12 @@ export default function CreateProductScreen ({ navigation, route }) {
       .number()
       .positive()
       .integer()
-      .required('Product category is required')
+      .required('Product category is required'),
+    scheduleId: yup
+      .number()
+      .positive()
+      .integer()
+      .nullable()
   })
 
   useEffect(() => {
@@ -64,6 +74,29 @@ export default function CreateProductScreen ({ navigation, route }) {
     }
     fetchProductCategories()
   }, [])
+
+  useEffect(() => {
+  async function fetchSchedules () {
+    try {
+      const fetchedSchedules = await getSchedules(route.params.id)
+      const reshapedSchedules = fetchedSchedules.map(schedule => ({
+        label: `${schedule.startTime} - ${schedule.endTime}`,
+        value: schedule.id
+      }))
+      setSchedules(reshapedSchedules)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving schedules. ${error} `,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+  fetchSchedules()
+}, [])
+
+
   const pickImage = async (onSuccess) => {
     const result = await ExpoImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -94,6 +127,9 @@ export default function CreateProductScreen ({ navigation, route }) {
       setBackendErrors(error.errors)
     }
   }
+
+  // no hemos añadido ErrorMessage despues del 2 DropDownPicker porque scheduleId no es obligatorio para un product
+
   return (
     <Formik
       validationSchema={validationSchema}
@@ -135,6 +171,21 @@ export default function CreateProductScreen ({ navigation, route }) {
                 dropDownStyle={{ backgroundColor: '#fafafa' }}
               />
               <ErrorMessage name={'productCategoryId'} render={msg => <TextError>{msg}</TextError> }/>
+              
+              <DropDownPicker
+                open={open2}
+                value={values.scheduleId}
+                items={schedules}
+                setOpen={setOpen2}
+                onSelectItem={item => {
+                  setFieldValue('scheduleId', item.value)
+                }}
+                setItems={setSchedules}
+                placeholder="Select the schedule (optional)"
+                containerStyle={{ height: 40, marginTop: 20, marginBottom: 20 }}
+                style={{ backgroundColor: GlobalStyles.brandBackground }}
+                dropDownStyle={{ backgroundColor: '#fafafa' }}
+              />
 
               <TextRegular>Is it available?</TextRegular>
               <Switch

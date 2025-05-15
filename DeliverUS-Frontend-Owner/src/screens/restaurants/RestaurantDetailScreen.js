@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { StyleSheet, View, FlatList, ImageBackground, Image, Pressable } from 'react-native'
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { getDetail } from '../../api/RestaurantEndpoints'
+import { getDetail, getActiveProducts } from '../../api/RestaurantEndpoints'
 import { remove } from '../../api/ProductEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextRegular from '../../components/TextRegular'
@@ -16,10 +16,15 @@ import { API_BASE_URL } from '@env'
 export default function RestaurantDetailScreen ({ navigation, route }) {
   const [restaurant, setRestaurant] = useState({})
   const [productToBeDeleted, setProductToBeDeleted] = useState(null)
+  const [ productsActive, setProductsActive ] = useState([])
 
   useEffect(() => {
     fetchRestaurantDetail()
   }, [route])
+
+  useEffect(() => {
+    fetchActiveProducts()
+  }, [])
 
   const renderHeader = () => {
     return (
@@ -111,7 +116,7 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
   const renderEmptyProductsList = () => {
     return (
       <TextRegular textStyle={styles.emptyList}>
-        This restaurant has no products yet.
+        This restaurant has no active products with schedule.
       </TextRegular>
     )
   }
@@ -123,6 +128,21 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
     } catch (error) {
       showMessage({
         message: `There was an error while retrieving restaurant details (id ${route.params.id}). ${error}`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
+  const fetchActiveProducts = async () => {
+    try {
+      const activeProducts = await getActiveProducts(route.params.id)
+      const filtered = activeProducts.products.filter(product => product.scheduleId)
+      setProductsActive(filtered)
+    } catch(error){
+      showMessage({
+        message: `There was an error while retrieving products with scheduleId. ${error}`,
         type: 'error',
         style: GlobalStyles.flashStyle,
         titleStyle: GlobalStyles.flashTextStyle
@@ -159,7 +179,7 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyProductsList}
         style={styles.container}
-        data={restaurant.products}
+        data={productsActive} //porque queremos mostrar aquellos que esten activos (todos los productos sería (restaurant.products))
         renderItem={renderProduct}
         keyExtractor={item => item.id.toString()}
       />

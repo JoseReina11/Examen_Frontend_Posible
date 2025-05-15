@@ -78,6 +78,25 @@ export default function RestaurantsScreen ({ navigation, route }) {
             </TextRegular>
           </View>
         </Pressable>
+
+        <Pressable                                              //le pasamos el item.id porque es item es parametro de renderRestaurant
+            onPress={() => navigation.navigate('ScheduleListScreen', { id: item.id })
+            }
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandGreenTap
+                  : GlobalStyles.brandGreen
+              },
+              styles.actionButton
+            ]}>
+          <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+            <MaterialCommunityIcons name='clock' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Schedule 
+            </TextRegular>
+          </View>
+        </Pressable>
         </View>
       </ImageCard>
     )
@@ -196,7 +215,7 @@ const styles = StyleSheet.create({
     padding: 10,
     alignSelf: 'center',
     flexDirection: 'column',
-    width: '50%'
+    width: '30%'
   },
   actionButtonsContainer: {
     flexDirection: 'row',
